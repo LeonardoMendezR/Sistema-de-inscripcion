@@ -31,13 +31,34 @@ export function CourseList() {
       .finally(() => setIsLoading(false))
   }, [])
 
-  if (isLoading) return <div>Cargando cursos...</div>
-  if (error) return <div style={{ color: "red" }}>{error}</div>
+  if (isLoading) return (
+    <div className="flex flex-col gap-4">
+      <Skeleton className="h-10 w-32" />
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {[...Array(3)].map((_, i) => (
+          <Card key={i} className="h-48">
+            <CardHeader>
+              <Skeleton className="h-6 w-1/2 mb-2" />
+              <Skeleton className="h-4 w-1/3" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-4 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2" />
+            </CardContent>
+            <CardFooter>
+              <Skeleton className="h-8 w-full" />
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+    </div>
+  )
+  if (error) return <div className="text-red-600 font-semibold">{error}</div>
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end">
-        <Button asChild>
+      <div className="flex justify-end mb-2">
+        <Button asChild size="sm">
           <Link href="/crear-curso">
             <Plus className="h-4 w-4 mr-2" />
             Crear Curso
@@ -46,10 +67,10 @@ export function CourseList() {
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {courses.map((course) => (
-          <Card key={course.id} className="overflow-hidden">
-            <CardHeader className="pb-2">
+          <Card key={course.id} className="overflow-hidden shadow border-gray-100">
+            <CardHeader className="pb-2 bg-gray-50 border-b">
               <div className="flex justify-between items-start">
-                <CardTitle className="mr-2">{course.title}</CardTitle>
+                <CardTitle className="mr-2 text-lg font-bold">{course.title}</CardTitle>
                 <Badge variant={course.location === "presencial" ? "default" : "outline"}>
                   {course.location === "presencial" ? "Presencial" : "Virtual"}
                 </Badge>
@@ -59,27 +80,27 @@ export function CourseList() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{course.description}</p>
+              <p className="text-sm text-muted-foreground min-h-[2.5rem]">{course.description}</p>
               <div className="mt-2 text-sm">
                 <span className="font-medium">Capacidad:</span> {course.enrolled}/{course.capacity} inscriptos
               </div>
             </CardContent>
             <CardFooter className="flex flex-col sm:flex-row gap-2">
               <div className="flex gap-2 w-full sm:w-auto">
-                <Button asChild className="flex-1 sm:flex-initial">
+                <Button asChild className="flex-1 sm:flex-initial" size="sm">
                   <Link href={`/curso/${course.id}/manual`}>
                     <ClipboardList className="h-4 w-4 mr-2" />
                     Carga Manual
                   </Link>
                 </Button>
-                <Button asChild variant="outline" className="flex-1 sm:flex-initial">
+                <Button asChild variant="outline" className="flex-1 sm:flex-initial" size="sm">
                   <Link href={`/curso/${course.id}/qr`}>
                     <QrCode className="h-4 w-4 mr-2" />
                     Generar QR
                   </Link>
                 </Button>
               </div>
-              <Button asChild variant="secondary" className="w-full sm:w-auto">
+              <Button asChild variant="secondary" className="w-full sm:w-auto" size="sm">
                 <Link href={`/curso/${course.id}/inscripciones`}>
                   <Download className="h-4 w-4 mr-2" />
                   Inscripciones

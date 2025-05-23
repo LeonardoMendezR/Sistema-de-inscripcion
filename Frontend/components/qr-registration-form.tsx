@@ -90,15 +90,26 @@ export function QRRegistrationForm({ courseId, courseTitle }: QRRegistrationForm
             <Input
               id="cuil"
               value={cuil}
-              onChange={(e) => setCuil(e.target.value)}
+              onChange={(e) => setCuil(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="Ingrese su CUIL (11 dígitos)"
               disabled={isSearching || success}
               maxLength={11}
+              autoComplete="off"
+              className={
+                cuil.length === 11
+                  ? "border-green-400 focus:border-green-600"
+                  : cuil.length > 0
+                  ? "border-red-400 focus:border-red-600"
+                  : ""
+              }
             />
             <Button onClick={handleCuilSearch} disabled={isSearching || cuil.length !== 11 || success}>
               {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
             </Button>
           </div>
+          {cuil.length > 0 && cuil.length !== 11 && (
+            <span className="text-xs text-red-500">El CUIL debe tener 11 dígitos numéricos</span>
+          )}
         </div>
 
         {error && (

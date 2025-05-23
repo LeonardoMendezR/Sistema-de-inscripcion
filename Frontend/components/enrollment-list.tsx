@@ -132,23 +132,23 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle>Listado de Inscripciones</CardTitle>
+    <Card className="shadow-xl border-gray-100">
+      <CardHeader className="flex flex-row items-center justify-between bg-gray-50 border-b rounded-t-md">
+        <CardTitle className="text-lg font-bold tracking-tight">Listado de Inscripciones</CardTitle>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button disabled={enrollments.length === 0}>
+            <Button disabled={enrollments.length === 0} variant="outline" size="sm" title="Exportar inscripciones">
               <Download className="h-4 w-4 mr-2" />
               Exportar
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={exportToExcel}>
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onClick={exportToExcel} className="cursor-pointer">
+              <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
               Exportar a Excel (.xlsx)
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={exportToCSV}>
-              <FileCsv className="h-4 w-4 mr-2" />
+            <DropdownMenuItem onClick={exportToCSV} className="cursor-pointer">
+              <FileCsv className="h-4 w-4 mr-2 text-blue-600" />
               Exportar a CSV (.csv)
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -160,10 +160,10 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
             No hay inscripciones registradas para este curso.
           </div>
         ) : (
-          <div className="rounded-md border">
-            <Table>
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="min-w-full text-sm">
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-gray-50">
                   <TableHead>CUIL</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Apellido</TableHead>
@@ -173,14 +173,15 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enrollments.map((enrollment) => (
-                  <TableRow key={enrollment.id}>
-                    <TableCell className="font-medium">{enrollment.userId}</TableCell>
+                {enrollments.map((enrollment, idx) => (
+                  <TableRow key={enrollment.id || `${enrollment.userId}-${enrollment.courseId}-${idx}`}
+                    className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <TableCell className="font-mono font-medium">{enrollment.userId}</TableCell>
                     <TableCell>{enrollment.user?.firstName}</TableCell>
                     <TableCell>{enrollment.user?.lastName}</TableCell>
                     <TableCell className="hidden md:table-cell">{enrollment.user?.email || "-"}</TableCell>
                     <TableCell className="hidden md:table-cell">{enrollment.user?.phone || "-"}</TableCell>
-                    <TableCell>{new Date(enrollment.enrollmentDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(enrollment.enrollmentDate).toLocaleString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

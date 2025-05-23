@@ -59,10 +59,12 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-4">
+    <form onSubmit={onSubmit} className="space-y-6">
       <div className="space-y-2">
         <Label htmlFor="username">Usuario</Label>
-        <Input id="username" name="username" placeholder="Ingrese su usuario" required disabled={isLoading} />
+        <Input id="username" name="username" placeholder="Ingrese su usuario" required disabled={isLoading}
+          autoFocus
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Contraseña</Label>
@@ -75,7 +77,7 @@ export function LoginForm() {
           disabled={isLoading}
         />
       </div>
-      <Button type="submit" className="w-full" disabled={isLoading}>
+      <Button type="submit" className="w-full" disabled={isLoading} size="sm">
         {isLoading ? "Iniciando sesión..." : "Iniciar sesión"}
       </Button>
     </form>

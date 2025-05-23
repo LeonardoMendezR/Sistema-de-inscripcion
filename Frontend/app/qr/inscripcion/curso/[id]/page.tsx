@@ -20,7 +20,8 @@ export default async function QRRegistrationPage({ params }: QRRegistrationPageP
       <div className="w-full max-w-md">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold">Inscripción a Curso</h1>
-          <p className="text-muted-foreground">{course.title}</p>
+          <p className="text-muted-foreground mb-2">{course.title}</p>
+          <p className="text-xs text-gray-500">Por favor, ingrese su CUIL para inscribirse. Si ya está inscripto, aparecerá un aviso.</p>
         </div>
         <QRRegistrationForm courseId={params.id} courseTitle={course.title} />
       </div>

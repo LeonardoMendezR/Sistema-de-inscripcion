@@ -12,6 +12,9 @@ export default function LoginPage() {
         <CardContent>
           <LoginForm />
         </CardContent>
+        <div className="text-xs text-center text-muted-foreground pb-4">
+          © {new Date().getFullYear()} Sistema de Inscripción. Todos los derechos reservados.
+        </div>
       </Card>
     </div>
   )

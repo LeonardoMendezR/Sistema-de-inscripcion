@@ -26,10 +26,21 @@ export async function getCourses() {
 }
 
 export async function getCourse(id: string) {
-  if (typeof window === "undefined") return null;
-  const res = await api.get("/cursos");
-  const cursos = res.data;
-  return cursos.find((c: any) => c.id === id) || null;
+  // Permite funcionar tanto en server como en client components
+  let cursos;
+  if (typeof window === "undefined") {
+    // Server: usar fetch absoluto
+    const res = await fetch(process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/cursos` : "http://localhost:3000/api/cursos", {
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store"
+    });
+    cursos = await res.json();
+  } else {
+    // Client: usar axios
+    const res = await api.get("/cursos");
+    cursos = res.data;
+  }
+  return cursos.find((c: any) => String(c.id) === String(id)) || null;
 }
 
 export async function getUserByCuil(cuil: string) {

@@ -1,6 +1,9 @@
+"use client";
+
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CreateCourseForm } from "@/components/create-course-form";
+import { Header } from "@/components/header";
 
 export default function CrearCursoPage() {
   const router = useRouter();
@@ -10,5 +13,10 @@ export default function CrearCursoPage() {
       router.replace("/login");
     }
   }, [router]);
-  return <CreateCourseForm />;
+  return (
+    <>
+      <Header />
+      <CreateCourseForm />
+    </>
+  );
 }
