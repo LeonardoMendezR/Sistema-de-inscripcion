@@ -12,49 +12,27 @@ import { ClipboardList, QrCode, Plus, Download } from "lucide-react"
 
 export function CourseList() {
   const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    async function loadCourses() {
-      try {
-        const data = await getCourses()
-        setCourses(data)
-      } catch (error) {
-        console.error("Error al cargar los cursos:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadCourses()
+    setIsLoading(true)
+    getCourses()
+      .then(setCourses)
+      .catch((err) => {
+        if (err?.response) {
+          setError(
+            `Error al cargar cursos: ${err.response.status} - ${err.response.data?.error || JSON.stringify(err.response.data)}`
+          )
+        } else {
+          setError("Error al cargar cursos: " + err?.message)
+        }
+      })
+      .finally(() => setIsLoading(false))
   }, [])
 
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <Skeleton className="h-10 w-40" />
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardHeader className="pb-2">
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-full" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-20 w-full" />
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Skeleton className="h-10 w-24" />
-                <Skeleton className="h-10 w-24" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
+  if (isLoading) return <div>Cargando cursos...</div>
+  if (error) return <div style={{ color: "red" }}>{error}</div>
 
   return (
     <div className="space-y-4">

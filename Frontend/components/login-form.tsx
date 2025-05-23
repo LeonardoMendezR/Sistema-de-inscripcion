@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { login } from "@/lib/api"
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -18,30 +19,39 @@ export function LoginForm() {
     event.preventDefault()
     setIsLoading(true)
 
+    // Limpio token previo
+    localStorage.removeItem("token")
+
     const formData = new FormData(event.currentTarget)
     const username = formData.get("username") as string
     const password = formData.get("password") as string
 
-    // Simulación de autenticación
     try {
-      // En un caso real, aquí iría la llamada a la API de autenticación
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
-      // Simulamos una autenticación exitosa
-      if (username === "admin" && password === "admin") {
+      const data = await login({ usuario: username, password })
+      localStorage.setItem("token", data.token)
+      localStorage.setItem("rol", data.rol)
+      localStorage.setItem("usuario", data.usuario)
+      if (data.rol !== "admin") {
         toast({
-          title: "Inicio de sesión exitoso",
-          description: "Bienvenido al sistema de inscripción",
+          variant: "destructive",
+          title: "Acceso denegado",
+          description: "Solo los administradores pueden acceder al sistema.",
         })
-        router.push("/cursos")
-      } else {
-        throw new Error("Credenciales inválidas")
+        setIsLoading(false)
+        return
       }
-    } catch (error) {
+      toast({
+        title: "Inicio de sesión exitoso",
+        description: "Bienvenido al sistema de inscripción",
+      })
+      // Uso replace y forzo recarga para limpiar el estado de Next.js
+      router.replace("/cursos")
+      window.location.href = "/cursos"
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Error de autenticación",
-        description: "Usuario o contraseña incorrectos",
+        description: error?.response?.data?.error || "Usuario o contraseña incorrectos",
       })
     } finally {
       setIsLoading(false)

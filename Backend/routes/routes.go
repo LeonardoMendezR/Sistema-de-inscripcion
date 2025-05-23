@@ -6,25 +6,38 @@ import (
 )
 
 func RegisterRoutes(r *gin.Engine) {
-	// 📌 Verificación de persona (consulta externa por CUIL)
-	r.POST("/verificar-persona", controllers.BuscarPersonaHandler)
+	api := r.Group("/api")
+	{
+		// Login demo
+		api.POST("/login", func(c *gin.Context) {
+			var req struct {
+				Usuario  string `json:"usuario"`
+				Password string `json:"password"`
+			}
+			if err := c.ShouldBindJSON(&req); err != nil {
+				c.JSON(400, gin.H{"error": "Datos inválidos"})
+				return
+			}
+			if req.Usuario == "admin" && req.Password == "admin" {
+				c.JSON(200, gin.H{
+					"token": "demo-token",
+					"rol": "admin",
+					"usuario": req.Usuario,
+				})
+				return
+			}
+			c.JSON(401, gin.H{"error": "Credenciales incorrectas"})
+		})
 
-	// 📝 Gestión de inscripciones manuales
-	r.POST("/inscribir-persona", controllers.InscribirPersona)
-	r.GET("/inscriptos", controllers.ObtenerInscritos)
-	
-	// Este endpoint puede ser otro handler diferente si querés buscar inscripto por CUIL localmente
-	// Por ahora lo comento o podrías hacer uno específico
-	// r.GET("/buscar-inscripto/:cuil", controllers.BuscarInscripto)
+		// Cursos
+		api.GET("/cursos", controllers.ObtenerCursos)
+		api.POST("/curso", controllers.CrearCurso)
 
-	r.POST("/resetear-inscriptos", controllers.ResetearInscripciones)
-	r.POST("/guardar-inscriptos", controllers.GuardarInscripcionesEnJSON)
-	r.POST("/cargar-inscriptos", controllers.CargarInscriptosDesdeJSON)
+		// Persona (GET por CUIL)
+		api.GET("/persona/:cuil", controllers.BuscarPersonaPorCuilHandler)
 
-	// 📚 Cursos disponibles
-	r.GET("/cursos", controllers.ObtenerCursos)
-
-	// 🛠️ Futuro: generación de QR, carga masiva, filtros, etc.
-	// r.GET("/generar-qr", controllers.GenerarQR)
-	// r.POST("/cargar-inscriptos-desde-json", controllers.CargarDesdeBackup)
+		// Inscripciones
+		api.POST("/inscripciones", controllers.InscribirPersona)
+		api.GET("/inscripciones", controllers.ObtenerInscritos)
+	}
 }

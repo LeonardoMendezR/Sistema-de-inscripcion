@@ -50,30 +50,17 @@ export function CreateCourseForm() {
     // Validar fechas
     if (!formData.startDate) {
       newErrors.startDate = "La fecha de inicio es obligatoria"
-    } else {
-      const startDate = new Date(formData.startDate)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-
-      if (startDate < today) {
-        newErrors.startDate = "La fecha de inicio debe ser igual o posterior a hoy"
-      }
     }
-
     if (!formData.endDate) {
-      newErrors.endDate = "La fecha de finalización es obligatoria"
-    } else if (formData.startDate && formData.endDate) {
-      const startDate = new Date(formData.startDate)
-      const endDate = new Date(formData.endDate)
-
-      if (endDate <= startDate) {
-        newErrors.endDate = "La fecha de finalización debe ser posterior a la fecha de inicio"
-      }
+      newErrors.endDate = "La fecha de fin es obligatoria"
+    }
+    if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
+      newErrors.endDate = "La fecha de fin debe ser posterior a la de inicio"
     }
 
     // Validar capacidad
     if (!formData.capacity || formData.capacity <= 0) {
-      newErrors.capacity = "La capacidad debe ser mayor a cero"
+      newErrors.capacity = undefined // El campo es number, no string
     }
 
     setErrors(newErrors)
@@ -88,27 +75,33 @@ export function CreateCourseForm() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-
-    if (!validateForm()) {
-      return
-    }
-
+    if (!validateForm()) return
     setIsSubmitting(true)
+    setErrors({})
     try {
-      const newCourse = await createCourse(formData)
-      toast({
-        title: "Curso creado exitosamente",
-        description: `El curso "${formData.title}" ha sido creado correctamente.`,
-      })
-      router.push(`/curso/${newCourse.id}/qr`)
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error al crear el curso",
-        description: "Ha ocurrido un error al intentar crear el curso. Intente nuevamente.",
-      })
+      await createCourse(formData)
+      toast({ title: "Curso creado", description: "El curso fue creado exitosamente." })
+      router.replace("/cursos")
+    } catch (err: any) {
+      if (err?.response?.status === 401) {
+        localStorage.removeItem("token")
+        localStorage.removeItem("rol")
+        localStorage.removeItem("usuario")
+        toast({
+          variant: "destructive",
+          title: "Sesión expirada",
+          description: "Por favor, inicia sesión nuevamente.",
+        })
+        router.replace("/login")
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error al crear curso",
+          description: err?.response?.data?.error || "Error inesperado",
+        })
+      }
     } finally {
       setIsSubmitting(false)
     }

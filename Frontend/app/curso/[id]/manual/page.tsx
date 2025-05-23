@@ -1,29 +1,36 @@
-import { Header } from "@/components/header"
-import { ManualRegistrationForm } from "@/components/manual-registration-form"
-import { getCourse } from "@/lib/api"
-import { notFound } from "next/navigation"
+"use client"
 
-interface ManualRegistrationPageProps {
-  params: {
-    id: string
-  }
-}
+import { useEffect, useState } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { ManualRegistrationForm } from "@/components/manual-registration-form";
+import { getCourse } from "@/lib/api";
 
-export default async function ManualRegistrationPage({ params }: ManualRegistrationPageProps) {
-  const course = await getCourse(params.id)
+export default function ManualRegistrationPage() {
+  const [course, setCourse] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const params = useParams();
+  const id = params?.id as string;
 
-  if (!course) {
-    notFound()
-  }
+  useEffect(() => {
+    if (!id) return;
+    setLoading(true);
+    getCourse(id)
+      .then((c) => {
+        if (!c) {
+          setError("Curso no encontrado");
+        } else {
+          setCourse(c);
+        }
+      })
+      .catch(() => setError("Error al cargar el curso"))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto p-4 md:p-6">
-        <h1 className="text-2xl font-bold mb-2">Inscripción Manual</h1>
-        <h2 className="text-xl mb-6">{course.title}</h2>
-        <ManualRegistrationForm courseId={params.id} />
-      </main>
-    </div>
-  )
+  if (loading) return <div>Cargando curso...</div>;
+  if (error) return <div style={{color: 'red'}}>{error}</div>;
+  if (!course) return <div>Curso no encontrado</div>;
+
+  return <ManualRegistrationForm courseId={course.id} />;
 }

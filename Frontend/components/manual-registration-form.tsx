@@ -37,24 +37,18 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
     setSuccess(false)
 
     try {
-      // Validar formato de CUIL (2 dígitos + 8 dígitos + 1 dígito verificador)
       const cuilRegex = /^\d{11}$/
       if (!cuilRegex.test(cuil)) {
         throw new Error("El CUIL debe contener 11 dígitos numéricos")
       }
-
-      // Buscar usuario por CUIL
       const userData = await getUserByCuil(cuil)
       if (!userData) {
         throw new Error("No se encontró un usuario con ese CUIL")
       }
-
-      // Verificar si ya está inscripto
       const alreadyEnrolled = await checkEnrollment(courseId, cuil)
       if (alreadyEnrolled) {
         setIsEnrolled(true)
       }
-
       setUser(userData)
     } catch (err: any) {
       setError(err.message || "Error al buscar el usuario")
@@ -77,7 +71,11 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
         description: `${user.firstName} ${user.lastName} ha sido inscripto correctamente`,
       })
     } catch (err: any) {
-      setError(err.message || "Error al realizar la inscripción")
+      if (err?.response?.status === 409) {
+        setError("Ya está inscripto")
+      } else {
+        setError(err.message || "Error al realizar la inscripción")
+      }
     } finally {
       setIsLoading(false)
     }
@@ -100,10 +98,10 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
                   value={cuil}
                   onChange={(e) => setCuil(e.target.value)}
                   placeholder="Ingrese el CUIL (11 dígitos)"
-                  disabled={isLoading}
+                  disabled={isLoading || success}
                   maxLength={11}
                 />
-                <Button type="submit" disabled={isLoading || cuil.length !== 11}>
+                <Button type="submit" disabled={isLoading || cuil.length !== 11 || success}>
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar"}
                 </Button>
               </div>
@@ -159,7 +157,7 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
               ) : (
                 <div className="flex justify-end gap-2 mt-4">
                   <Button variant="outline" onClick={handleBack} disabled={isLoading}>
-                    Cancelar
+                    Volver a Cursos
                   </Button>
                   <Button onClick={handleEnrollment} disabled={isLoading}>
                     {isLoading ? (
@@ -170,6 +168,26 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
                     ) : (
                       "Confirmar Inscripción"
                     )}
+                  </Button>
+                </div>
+              )}
+
+              {success && (
+                <div className="flex justify-end gap-2 mt-4">
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setCuil("");
+                      setUser(null);
+                      setIsEnrolled(false);
+                      setSuccess(false);
+                      setError(null);
+                    }}
+                  >
+                    Inscribir otro alumno
+                  </Button>
+                  <Button variant="outline" onClick={handleBack}>
+                    Volver a Cursos
                   </Button>
                 </div>
               )}

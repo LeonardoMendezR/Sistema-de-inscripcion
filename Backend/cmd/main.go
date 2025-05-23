@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/gin-contrib/cors"
 
 	"gobierno-inscripcion/routes"
 )
@@ -16,17 +17,18 @@ func main() {
 		log.Println("No se pudo cargar el archivo .env, usando valores por defecto")
 	}
 
-	
-
 	// Inicializar router Gin
 	router := gin.Default()
+
+	// Habilitar CORS para permitir requests del frontend
+	router.Use(cors.Default())
+
 	router.Static("/static", "./static")
 
-// Ruta raíz que carga index.html explícitamente
+	// Ruta raíz que carga index.html explícitamente
 	router.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
 	})
-
 
 	// Registrar rutas de la API
 	routes.RegisterRoutes(router)

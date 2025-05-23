@@ -67,7 +67,11 @@ export function QRRegistrationForm({ courseId, courseTitle }: QRRegistrationForm
       await createEnrollment(courseId, user.cuil)
       setSuccess(true)
     } catch (err: any) {
-      setError(err.message || "Error al realizar la inscripción")
+      if (err?.response?.status === 409) {
+        setError("Ya está inscripto")
+      } else {
+        setError(err.message || "Error al realizar la inscripción")
+      }
     } finally {
       setIsLoading(false)
     }

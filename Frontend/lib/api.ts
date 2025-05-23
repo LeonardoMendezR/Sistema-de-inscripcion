@@ -1,222 +1,68 @@
-import type { Course, User, Enrollment, CourseFormValues } from "@/lib/types"
+import axios from "axios";
 
-// Datos de ejemplo para simular la API
-const mockCourses: Course[] = [
-  {
-    id: "1",
-    title: "Introducción a la Programación",
-    description: "Curso básico de programación para principiantes",
-    startDate: "2024-06-01",
-    endDate: "2024-07-30",
-    capacity: 30,
-    enrolled: 15,
-    location: "presencial",
-  },
-  {
-    id: "2",
-    title: "Desarrollo Web Frontend",
-    description: "HTML, CSS y JavaScript para crear sitios web interactivos",
-    startDate: "2024-06-15",
-    endDate: "2024-08-15",
-    capacity: 25,
-    enrolled: 10,
-    location: "virtual",
-  },
-  {
-    id: "3",
-    title: "Bases de Datos SQL",
-    description: "Fundamentos de bases de datos relacionales y SQL",
-    startDate: "2024-07-01",
-    endDate: "2024-08-30",
-    capacity: 20,
-    enrolled: 8,
-    location: "presencial",
-  },
-  {
-    id: "4",
-    title: "Desarrollo de Aplicaciones Móviles",
-    description: "Creación de apps para iOS y Android con React Native",
-    startDate: "2024-07-15",
-    endDate: "2024-09-15",
-    capacity: 15,
-    enrolled: 5,
-    location: "virtual",
-  },
-]
+const api = axios.create({
+  baseURL: "/api", // Usa el proxy de Next.js
+});
 
-const mockUsers: Record<string, User> = {
-  "20123456789": {
-    cuil: "20123456789",
-    firstName: "Juan",
-    lastName: "Pérez",
-    email: "juan.perez@example.com",
-    phone: "1123456789",
-  },
-  "27987654321": {
-    cuil: "27987654321",
-    firstName: "María",
-    lastName: "González",
-    email: "maria.gonzalez@example.com",
-    phone: "1187654321",
-  },
-  "20456789012": {
-    cuil: "20456789012",
-    firstName: "Carlos",
-    lastName: "Rodríguez",
-    email: "carlos.rodriguez@example.com",
-    phone: "1145678901",
-  },
-  "27345678901": {
-    cuil: "27345678901",
-    firstName: "Laura",
-    lastName: "Fernández",
-    email: "laura.fernandez@example.com",
-    phone: "1134567890",
-  },
-}
-
-const mockEnrollments: Enrollment[] = [
-  {
-    id: "1",
-    courseId: "1",
-    userId: "20123456789",
-    enrollmentDate: "2024-05-15",
-  },
-  {
-    id: "2",
-    courseId: "2",
-    userId: "27987654321",
-    enrollmentDate: "2024-05-16",
-  },
-  {
-    id: "3",
-    courseId: "1",
-    userId: "20456789012",
-    enrollmentDate: "2024-05-17",
-  },
-  {
-    id: "4",
-    courseId: "3",
-    userId: "27345678901",
-    enrollmentDate: "2024-05-18",
-  },
-  {
-    id: "5",
-    courseId: "3",
-    userId: "20123456789",
-    enrollmentDate: "2024-05-19",
-  },
-]
-
-// Funciones de la API simulada
-export async function getCourses(): Promise<Course[]> {
-  // Simulamos un delay para imitar una llamada a la API
-  await new Promise((resolve) => setTimeout(resolve, 500))
-  return [...mockCourses]
-}
-
-export async function getCourse(id: string): Promise<Course | null> {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  return mockCourses.find((course) => course.id === id) || null
-}
-
-export async function getUserByCuil(cuil: string): Promise<User | null> {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  return mockUsers[cuil] || null
-}
-
-export async function checkEnrollment(courseId: string, cuil: string): Promise<boolean> {
-  await new Promise((resolve) => setTimeout(resolve, 300))
-  return mockEnrollments.some((enrollment) => enrollment.courseId === courseId && enrollment.userId === cuil)
-}
-
-export async function createEnrollment(courseId: string, cuil: string): Promise<Enrollment> {
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  // Verificar si ya existe la inscripción
-  const exists = await checkEnrollment(courseId, cuil)
-  if (exists) {
-    throw new Error("El usuario ya está inscrito en este curso")
+api.interceptors.request.use((config) => {
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
+  return config;
+});
 
-  // Crear nueva inscripción
-  const newEnrollment: Enrollment = {
-    id: `${mockEnrollments.length + 1}`,
-    courseId,
-    userId: cuil,
-    enrollmentDate: new Date().toISOString().split("T")[0],
-  }
-
-  // En un caso real, aquí se guardaría en la base de datos
-  mockEnrollments.push(newEnrollment)
-
-  return newEnrollment
+export async function login({ usuario, password }: { usuario: string; password: string }) {
+  const res = await api.post("/login", { usuario, password });
+  // Devuelve token, rol y usuario
+  return res.data;
 }
 
-export async function createCourse(courseData: CourseFormValues): Promise<Course> {
-  await new Promise((resolve) => setTimeout(resolve, 800))
-
-  // Crear nuevo curso
-  const newCourse: Course = {
-    id: `${mockCourses.length + 1}`,
-    title: courseData.title,
-    description: courseData.description || "",
-    startDate: courseData.startDate,
-    endDate: courseData.endDate,
-    capacity: courseData.capacity,
-    enrolled: 0,
-    location: courseData.location,
-  }
-
-  // En un caso real, aquí se guardaría en la base de datos
-  mockCourses.push(newCourse)
-
-  return newCourse
+export async function getCourses() {
+  const res = await api.get("/cursos");
+  return res.data;
 }
 
-export async function getCourseEnrollments(courseId: string): Promise<EnrollmentWithUserData[]> {
-  await new Promise((resolve) => setTimeout(resolve, 600))
-
-  const enrollments = mockEnrollments.filter((enrollment) => enrollment.courseId === courseId)
-
-  // Obtener datos completos de cada inscripción
-  const enrollmentsWithUserData = enrollments
-    .map((enrollment) => {
-      const user = mockUsers[enrollment.userId]
-      const course = mockCourses.find((course) => course.id === enrollment.courseId)
-
-      return {
-        ...enrollment,
-        user: user || null,
-        course: course || null,
-      }
-    })
-    .filter((item) => item.user !== null && item.course !== null)
-
-  return enrollmentsWithUserData
+export async function getCourse(id: string) {
+  if (typeof window === "undefined") return null;
+  const res = await api.get("/cursos");
+  const cursos = res.data;
+  return cursos.find((c: any) => c.id === id) || null;
 }
 
-export async function getAllEnrollments(): Promise<EnrollmentWithUserData[]> {
-  await new Promise((resolve) => setTimeout(resolve, 800))
-
-  // Obtener datos completos de cada inscripción
-  const enrollmentsWithUserData = mockEnrollments
-    .map((enrollment) => {
-      const user = mockUsers[enrollment.userId]
-      const course = mockCourses.find((course) => course.id === enrollment.courseId)
-
-      return {
-        ...enrollment,
-        user: user || null,
-        course: course || null,
-      }
-    })
-    .filter((item) => item.user !== null && item.course !== null)
-
-  return enrollmentsWithUserData
+export async function getUserByCuil(cuil: string) {
+  const res = await api.get(`/persona/${cuil}`);
+  return res.data;
 }
 
-export interface EnrollmentWithUserData extends Enrollment {
-  user: User | null
-  course: Course | null
+export async function checkEnrollment(courseId: string, cuil: string) {
+  const res = await api.get(`/inscripciones?cursoId=${courseId}`);
+  if (!Array.isArray(res.data)) return false;
+  return res.data.some((enr: any) => enr.cuil === cuil);
+}
+
+export async function createEnrollment(courseId: string, cuil: string) {
+  const res = await api.post("/inscripciones", { courseId, cuil });
+  return res.data;
+}
+
+export async function createCourse(courseData: any) {
+  // Mapeo de campos del frontend al backend
+  const backendData = {
+    nombre: courseData.title,
+    descripcion: courseData.description,
+    fechaInicio: courseData.startDate,
+    fechaFin: courseData.endDate,
+    capacidad: courseData.capacity,
+    modalidad: courseData.location,
+  };
+  const res = await api.post("/curso", backendData);
+  return res.data;
+}
+
+export async function getCourseEnrollments(courseId: string) {
+  const res = await api.get(`/inscripciones?cursoId=${courseId}`);
+  return res.data;
 }

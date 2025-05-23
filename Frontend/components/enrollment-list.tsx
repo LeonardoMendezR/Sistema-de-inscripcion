@@ -6,7 +6,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getCourseEnrollments } from "@/lib/api"
-import type { EnrollmentWithUserData } from "@/lib/api"
+// Define EnrollmentWithUserData type locally
+type EnrollmentWithUserData = {
+  id: string
+  userId: string
+  courseId: string
+  enrollmentDate: string
+  user?: {
+    firstName?: string
+    lastName?: string
+    email?: string
+    phone?: string
+  }
+  course?: {
+    title?: string
+  }
+}
 import { Download, FileSpreadsheet, FileSpreadsheetIcon as FileCsv } from "lucide-react"
 import * as XLSX from "xlsx"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"

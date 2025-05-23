@@ -1,14 +1,14 @@
-import { Header } from "@/components/header"
-import { CreateCourseForm } from "@/components/create-course-form"
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { CreateCourseForm } from "@/components/create-course-form";
 
-export default function CreateCoursePage() {
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-1 container mx-auto p-4 md:p-6">
-        <h1 className="text-2xl font-bold mb-6">Crear Nuevo Curso</h1>
-        <CreateCourseForm />
-      </main>
-    </div>
-  )
+export default function CrearCursoPage() {
+  const router = useRouter();
+  useEffect(() => {
+    const rol = typeof window !== "undefined" ? localStorage.getItem("rol") : null;
+    if (rol !== "admin") {
+      router.replace("/login");
+    }
+  }, [router]);
+  return <CreateCourseForm />;
 }
