@@ -173,17 +173,27 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enrollments.map((enrollment, idx) => (
-                  <TableRow key={enrollment.id || `${enrollment.userId}-${enrollment.courseId}-${idx}`}
-                    className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                    <TableCell className="font-mono font-medium">{enrollment.userId}</TableCell>
-                    <TableCell>{enrollment.user?.firstName}</TableCell>
-                    <TableCell>{enrollment.user?.lastName}</TableCell>
-                    <TableCell className="hidden md:table-cell">{enrollment.user?.email || "-"}</TableCell>
-                    <TableCell className="hidden md:table-cell">{enrollment.user?.phone || "-"}</TableCell>
-                    <TableCell>{new Date(enrollment.enrollmentDate).toLocaleString()}</TableCell>
-                  </TableRow>
-                ))}
+                {enrollments.map((enrollment: any, idx) => {
+                  // Compatibilidad: soporta tanto el formato antiguo como el del backend
+                  const user = enrollment.user || enrollment.datos_persona || {};
+                  const cuil = enrollment.userId || enrollment.cuil || "";
+                  const nombre = user.firstName || user.nombre || "-";
+                  const apellido = user.lastName || user.apellido || "-";
+                  const email = user.email || "-";
+                  const telefono = user.phone || "-";
+                  const fecha = enrollment.fecha || enrollment.enrollmentDate || "";
+                  return (
+                    <TableRow key={enrollment.id || `${cuil}-${enrollment.courseId || enrollment.curso_id || ""}-${idx}`}
+                      className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                      <TableCell className="font-mono font-medium">{cuil}</TableCell>
+                      <TableCell>{nombre}</TableCell>
+                      <TableCell>{apellido}</TableCell>
+                      <TableCell className="hidden md:table-cell">{email}</TableCell>
+                      <TableCell className="hidden md:table-cell">{telefono}</TableCell>
+                      <TableCell>{fecha ? new Date(fecha).toLocaleString() : "-"}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>

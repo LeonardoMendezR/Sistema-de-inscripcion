@@ -12,16 +12,31 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useToast } from "@/components/ui/use-toast"
 import { getUserByCuil, checkEnrollment, createEnrollment } from "@/lib/api"
-import type { User } from "@/lib/types"
 import { AlertCircle, CheckCircle2, Loader2, LogOut } from "lucide-react"
 
-interface ManualRegistrationFormProps {
-  courseId: string
+// Tipado real de inscripto según backend
+interface Persona {
+  nombre: string;
+  apellido: string;
+  cuil: string;
+  // otros campos si los necesitas
 }
 
-export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps) {
+interface Inscripto {
+  cuil: string;
+  curso_id: string;
+  datos_persona: Persona;
+  fecha?: string;
+}
+
+interface ManualRegistrationFormProps {
+  courseId: string;
+  onCourseDeleted?: () => void;
+}
+
+export function ManualRegistrationForm({ courseId, onCourseDeleted }: ManualRegistrationFormProps) {
   const [cuil, setCuil] = useState("")
-  const [user, setUser] = useState<User | null>(null)
+  const [user, setUser] = useState<Persona | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -109,6 +124,30 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
     }
   }
 
+  const handleDeleteCourse = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer.")) return;
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`/api/cursos/${courseId}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (res.ok) {
+        toast({ title: "Curso eliminado", description: "El curso fue eliminado correctamente." });
+        if (typeof onCourseDeleted === "function") onCourseDeleted();
+        router.push("/cursos");
+      } else {
+        const text = await res.text();
+        toast({ title: "Error al eliminar", description: text || "No se pudo eliminar el curso.", variant: "destructive" });
+      }
+    } catch (err) {
+      toast({ title: "Error al eliminar", description: "No se pudo eliminar el curso.", variant: "destructive" });
+    }
+  };
+
   const handleBack = () => {
     router.push("/cursos")
   }
@@ -158,15 +197,15 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
             <div className="mt-8 p-4 rounded bg-gray-50 border">
               <div className="mb-2 font-semibold text-gray-700">Datos del alumno:</div>
               <div className="grid grid-cols-1 gap-2 text-sm">
-                <div><span className="font-medium">Nombre:</span> {user.firstName}</div>
-                <div><span className="font-medium">Apellido:</span> {user.lastName}</div>
-                {user.email && <div><span className="font-medium">Email:</span> {user.email}</div>}
-                {user.phone && <div><span className="font-medium">Teléfono:</span> {user.phone}</div>}
+                <div><span className="font-medium">Nombre:</span> {user.nombre}</div>
+                <div><span className="font-medium">Apellido:</span> {user.apellido}</div>
+                <div><span className="font-medium">CUIL:</span> {user.cuil}</div>
+                {/* Agrega aquí más campos si los necesitas, por ejemplo dirección, provincia, etc. */}
               </div>
               <Button
                 className="mt-6"
                 onClick={handleEnrollment}
-                disabled={isInscribiendo /* solo deshabilita mientras guarda */}
+                disabled={isInscribiendo}
               >
                 {isInscribiendo ? (
                   <><Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />Guardando...</>
@@ -204,6 +243,15 @@ export function ManualRegistrationForm({ courseId }: ManualRegistrationFormProps
             <Link href={`/curso/${courseId}/inscripciones`}>
               Ver inscriptos del curso
             </Link>
+          </Button>
+
+          {/* Botón para eliminar curso */}
+          <Button
+            variant="destructive"
+            className="mt-4 w-full"
+            onClick={handleDeleteCourse}
+          >
+            Eliminar curso
           </Button>
         </CardContent>
       </Card>
