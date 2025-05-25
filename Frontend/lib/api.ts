@@ -55,19 +55,22 @@ export async function checkEnrollment(courseId: string, cuil: string) {
 }
 
 export async function createEnrollment(courseId: string, cuil: string) {
-  const res = await api.post("/inscripciones", { courseId, cuil });
+  // El backend espera { cuil, curso_id }
+  const res = await api.post("/inscripciones", { cuil, curso_id: courseId });
   return res.data;
 }
 
 export async function createCourse(courseData: any) {
   // Mapeo de campos del frontend al backend
+  const totalMinutes = (courseData.durationHours || 0) * 60 + (courseData.durationMinutes || 0);
   const backendData = {
     nombre: courseData.title,
     descripcion: courseData.description,
     fechaInicio: courseData.startDate,
     fechaFin: courseData.endDate,
+    duracionMin: totalMinutes,
     capacidad: courseData.capacity,
-    modalidad: courseData.location,
+    modalidad: "presencial",
   };
   const res = await api.post("/curso", backendData);
   return res.data;

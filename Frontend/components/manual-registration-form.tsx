@@ -85,7 +85,7 @@ export function ManualRegistrationForm({ courseId, onCourseDeleted }: ManualRegi
       const token = localStorage.getItem("token")
       const body = {
         cuil: String(user.cuil).trim(),
-        curso_id: String(courseId)
+        curso_id: Number(courseId)
       }
       // Debug: log values before fetch
       console.log("ENROLL DEBUG", {
@@ -246,6 +246,7 @@ export function ManualRegistrationForm({ courseId, onCourseDeleted }: ManualRegi
           </Button>
 
           {/* Botón para eliminar curso */}
+          {/*
           <Button
             variant="destructive"
             className="mt-4 w-full"
@@ -253,6 +254,7 @@ export function ManualRegistrationForm({ courseId, onCourseDeleted }: ManualRegi
           >
             Eliminar curso
           </Button>
+          */}
         </CardContent>
       </Card>
     </div>

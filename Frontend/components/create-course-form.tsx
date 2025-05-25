@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
 import { createCourse } from "@/lib/api"
 import { Loader2 } from "lucide-react"
@@ -19,7 +18,8 @@ interface FormData {
   title: string
   startDate: string
   endDate: string
-  location: "presencial" | "virtual"
+  durationHours: number // horas de duración
+  durationMinutes: number // minutos de duración
   description: string
   capacity: number
 }
@@ -30,16 +30,17 @@ export function CreateCourseForm() {
     title: "",
     startDate: "",
     endDate: "",
-    location: "presencial",
+    durationHours: 1,
+    durationMinutes: 0,
     description: "",
     capacity: 20,
   })
-  const [errors, setErrors] = useState<Partial<FormData>>({})
+  const [errors, setErrors] = useState<{ [key: string]: string }>({})
   const router = useRouter()
   const { toast } = useToast()
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<FormData> = {}
+    const newErrors: { [key: string]: string } = {}
 
     // Validar título
     if (!formData.title.trim()) {
@@ -56,12 +57,18 @@ export function CreateCourseForm() {
       newErrors.endDate = "La fecha de fin es obligatoria"
     }
     if (formData.startDate && formData.endDate && formData.startDate > formData.endDate) {
-      newErrors.endDate = "La fecha de fin debe ser posterior a la de inicio"
+      newErrors.endDate = "La fecha de fin debe ser posterior o igual a la de inicio"
+    }
+
+    // Validar duración
+    const totalMinutes = formData.durationHours * 60 + formData.durationMinutes
+    if (totalMinutes < 15) {
+      newErrors.duration = "La duración debe ser de al menos 15 minutos"
     }
 
     // Validar capacidad
     if (!formData.capacity || formData.capacity <= 0) {
-      newErrors.capacity = undefined // El campo es number, no string
+      newErrors.capacity = "La capacidad debe ser mayor a 0"
     }
 
     setErrors(newErrors)
@@ -70,9 +77,14 @@ export function CreateCourseForm() {
 
   const handleInputChange = (field: keyof FormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    // Limpiar error del campo cuando el usuario empiece a escribir
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
+      const { [field]: _omit, ...rest } = errors;
+      setErrors(rest);
+    }
+    // Si se cambia horas o minutos, limpiar error de duración
+    if ((field === "durationHours" || field === "durationMinutes") && errors.duration) {
+      const { duration, ...rest } = errors;
+      setErrors(rest);
     }
   }
 
@@ -82,7 +94,8 @@ export function CreateCourseForm() {
     setIsSubmitting(true)
     setErrors({})
     try {
-      await createCourse(formData)
+      const totalMinutes = formData.durationHours * 60 + formData.durationMinutes
+      await createCourse({ ...formData, durationMinutes: totalMinutes })
       toast({ title: "Curso creado", description: "El curso fue creado exitosamente." })
       router.replace("/cursos")
     } catch (err: any) {
@@ -153,23 +166,45 @@ export function CreateCourseForm() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Label>Modalidad *</Label>
-                <RadioGroup
-                  value={formData.location}
-                  onValueChange={(value: "presencial" | "virtual") => handleInputChange("location", value)}
-                  className="flex flex-row gap-8"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="presencial" id="presencial" />
-                    <Label htmlFor="presencial" className="font-normal">Presencial</Label>
+              <div className="space-y-2">
+                <Label>Duración *</Label>
+                <div className="flex gap-2 items-center">
+                  <div className="flex flex-col items-center">
+                    <Input
+                      id="durationHours"
+                      type="number"
+                      min="0"
+                      max="23"
+                      value={formData.durationHours.toString().padStart(2, '0')}
+                      onChange={(e) => handleInputChange("durationHours", Math.max(0, Math.min(23, Number(e.target.value))))}
+                      className="w-16 text-center appearance-none"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                    />
+                    <span className="text-xs text-gray-500 mt-1">Horas</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="virtual" id="virtual" />
-                    <Label htmlFor="virtual" className="font-normal">Virtual</Label>
+                  <span className="text-2xl font-light text-gray-400">:</span>
+                  <div className="flex flex-col items-center">
+                    <Input
+                      id="durationMinutes"
+                      type="number"
+                      min="0"
+                      max="59"
+                      value={formData.durationMinutes.toString().padStart(2, '0')}
+                      onChange={(e) => handleInputChange("durationMinutes", Math.max(0, Math.min(59, Number(e.target.value))))}
+                      className="w-16 text-center appearance-none"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                    />
+                    <span className="text-xs text-gray-500 mt-1">Minutos</span>
                   </div>
-                </RadioGroup>
+                </div>
+                <p className="text-xs text-muted-foreground">El curso debe durar al menos 15 minutos</p>
+                {errors.duration && <p className="text-xs text-red-500 mt-1">{errors.duration}</p>}
               </div>
+
+              {/* Modalidad fija a presencial */}
+              <input type="hidden" name="location" value="presencial" />
 
               <div className="space-y-2">
                 <Label htmlFor="capacity">Capacidad máxima *</Label>

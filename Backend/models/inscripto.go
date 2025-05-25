@@ -1,8 +1,19 @@
 package models
 
-type Inscripto struct {
-    CUIL     string `json:"cuil"`
-    Nombre   string `json:"nombre"`
-    Apellido string `json:"apellido"`
-    CursoID  string `json:"curso_id"` // <-- nuevo campo
+import (
+	"time"
+)
+
+type Inscripcion struct {
+	ID               uint      `gorm:"primaryKey"`
+	CursoID          uint      `gorm:"not null;index"`
+	NombreCurso      string    `gorm:"not null"`
+	Cuil             string    `gorm:"not null;size:11;index"`
+	Nombre           string    `gorm:"not null"`
+	Apellido         string    `gorm:"not null"`
+	FechaInscripcion time.Time `gorm:"autoCreateTime"`
+}
+
+func (Inscripcion) TableName() string {
+	return "inscripciones"
 }

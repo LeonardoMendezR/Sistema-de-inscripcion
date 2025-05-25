@@ -131,28 +131,34 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
     )
   }
 
+  // Obtener el nombre del curso del primer inscripto (si existe)
+  const courseName = enrollments[0]?.course?.title || "-";
+
   return (
     <Card className="shadow-xl border-gray-100">
-      <CardHeader className="flex flex-row items-center justify-between bg-gray-50 border-b rounded-t-md">
-        <CardTitle className="text-lg font-bold tracking-tight">Listado de Inscripciones</CardTitle>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button disabled={enrollments.length === 0} variant="outline" size="sm" title="Exportar inscripciones">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={exportToExcel} className="cursor-pointer">
-              <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
-              Exportar a Excel (.xlsx)
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={exportToCSV} className="cursor-pointer">
-              <FileCsv className="h-4 w-4 mr-2 text-blue-600" />
-              Exportar a CSV (.csv)
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <CardHeader className="bg-gray-50 border-b rounded-t-md flex flex-col gap-2">
+        <span className="text-xl font-bold tracking-tight text-primary">{courseName}</span>
+        <div className="flex flex-row items-center justify-between w-full">
+          <CardTitle className="text-lg font-bold tracking-tight">Listado de Inscripciones</CardTitle>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button disabled={enrollments.length === 0} variant="outline" size="sm" title="Exportar inscripciones">
+                <Download className="h-4 w-4 mr-2" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={exportToExcel} className="cursor-pointer">
+                <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
+                Exportar a Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={exportToCSV} className="cursor-pointer">
+                <FileCsv className="h-4 w-4 mr-2 text-blue-600" />
+                Exportar a CSV (.csv)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </CardHeader>
       <CardContent>
         {enrollments.length === 0 ? (
@@ -173,8 +179,7 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enrollments.map((enrollment: any, idx) => {
-                  // Compatibilidad: soporta tanto el formato antiguo como el del backend
+                {enrollments.map((enrollment: any, idx: number) => {
                   const user = enrollment.user || enrollment.datos_persona || {};
                   const cuil = enrollment.userId || enrollment.cuil || "";
                   const nombre = user.firstName || user.nombre || "-";

@@ -70,6 +70,8 @@ func ConsultarPersonaPorCUIL(cuil string) (*Persona, error) {
 	appName := os.Getenv("SOAP_APLICACION_HEADER")
 	soapAction := os.Getenv("SOAP_ACTION")
 	useMock := os.Getenv("USE_MOCK")
+	token := os.Getenv("SOAP_TOKEN")
+	sign := os.Getenv("SOAP_SIGN")
 
 	if useMock == "true" {
 		return &Persona{
@@ -87,12 +89,11 @@ func ConsultarPersonaPorCUIL(cuil string) (*Persona, error) {
 		}, nil
 	}
 
+	// Generar el request SOAP con los tags y namespaces correctos
 	soapRequest := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
-                  xmlns:ns="https://cba.gov.ar/Maestros/PersonaFisica/1.0.0" 
-                  xmlns:ns1="https://cba.gov.ar/Comunes/Encabezado/1.0.0">
-  <soapenv:Header>
-    <wsse:Security soapenv:mustUnderstand="1" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns="https://cba.gov.ar/Maestros/PersonaFisica/1.0.0" xmlns:ns1="https://cba.gov.ar/Comunes/Encabezado/1.0.0">
+  <soapenv:Header xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+    <wsse:Security soap:mustUnderstand="1" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
       <wsse:UsernameToken>
         <wsse:Username>%s</wsse:Username>
         <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">%s</wsse:Password>
@@ -103,14 +104,14 @@ func ConsultarPersonaPorCUIL(cuil string) (*Persona, error) {
     <ns:personaFisicaRequest>
       <ns:encabezado>
         <ns1:usuario>%s</ns1:usuario>
-        <ns1:token>?</ns1:token>
-        <ns1:sign>?</ns1:sign>
+        <ns1:token>%s</ns1:token>
+        <ns1:sign>%s</ns1:sign>
         <ns1:aplicacion>%s</ns1:aplicacion>
       </ns:encabezado>
       <ns:cuil>%s</ns:cuil>
     </ns:personaFisicaRequest>
   </soapenv:Body>
-</soapenv:Envelope>`, usuario, password, appUser, appName, cuil)
+</soapenv:Envelope>`, usuario, password, appUser, token, sign, appName, cuil)
 
 
 	fmt.Println("📤 XML SOAP enviado:")

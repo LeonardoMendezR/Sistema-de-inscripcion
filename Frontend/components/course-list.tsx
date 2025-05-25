@@ -8,12 +8,41 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
 import { getCourses } from "@/lib/api"
 import type { Course } from "@/lib/types"
-import { ClipboardList, QrCode, Plus, Download } from "lucide-react"
+import { ClipboardList, QrCode, Plus, Download, Trash2, Loader2 } from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
 
 export function CourseList() {
   const [courses, setCourses] = useState<Course[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const { toast } = useToast()
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar este curso? Esta acción no se puede deshacer.")) return
+    setDeletingId(id)
+    try {
+      const token = localStorage.getItem("token")
+      const res = await fetch(`/api/cursos/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (res.ok) {
+        setCourses((prev) => prev.filter((c) => c.id !== id))
+        toast?.({ title: "Curso eliminado", description: "El curso fue eliminado correctamente." })
+      } else {
+        const text = await res.text()
+        toast?.({ title: "Error al eliminar", description: text || "No se pudo eliminar el curso.", variant: "destructive" })
+      }
+    } catch (err) {
+      toast?.({ title: "Error al eliminar", description: "No se pudo eliminar el curso.", variant: "destructive" })
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   useEffect(() => {
     setIsLoading(true)
@@ -66,8 +95,8 @@ export function CourseList() {
         </Button>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {courses.map((course) => (
-          <Card key={course.id} className="overflow-hidden shadow border-gray-100">
+        {courses.map((course, idx) => (
+          <Card key={course.id + '-' + idx} className="overflow-hidden shadow border-gray-100">
             <CardHeader className="pb-2 bg-gray-50 border-b">
               <div className="flex justify-between items-start">
                 <CardTitle className="mr-2 text-lg font-bold">{course.title}</CardTitle>
@@ -100,6 +129,16 @@ export function CourseList() {
                   </Link>
                 </Button>
               </div>
+              <Button
+                variant="destructive"
+                className="w-full sm:w-auto"
+                size="sm"
+                onClick={() => handleDelete(course.id)}
+                disabled={deletingId === course.id}
+              >
+                {deletingId === course.id ? <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                Eliminar
+              </Button>
               <Button asChild variant="secondary" className="w-full sm:w-auto" size="sm">
                 <Link href={`/curso/${course.id}/inscripciones`}>
                   <Download className="h-4 w-4 mr-2" />

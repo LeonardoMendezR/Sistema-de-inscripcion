@@ -9,13 +9,39 @@ import (
 	"github.com/gin-contrib/cors"
 
 	"gobierno-inscripcion/routes"
+	"gobierno-inscripcion/models"
+	"gobierno-inscripcion/controllers"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func main() {
-	// Cargar variables de entorno desde .env
-	if err := godotenv.Load(); err != nil {
-		log.Println("No se pudo cargar el archivo .env, usando valores por defecto")
+	// Cargar variables de entorno desde .env SOLO si no estamos en Docker
+	// (En Docker Compose, las variables ya están en el entorno)
+	if os.Getenv("RUNNING_IN_DOCKER") != "true" {
+		if err := godotenv.Load(); err != nil {
+			log.Println("No se pudo cargar el archivo .env, usando valores por defecto")
+		}
 	}
+
+	// Conexión a MySQL
+	dsn := os.Getenv("MYSQL_DSN")
+	if dsn == "" {
+		// Formato: usuario:password@tcp(host:puerto)/dbname?parseTime=true
+		dsn = "root:password@tcp(127.0.0.1:3306)/sistema_inscripciones?parseTime=true"
+	}
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("No se pudo conectar a la base de datos:", err)
+	}
+
+	// Migraciones automáticas
+	db.AutoMigrate(&models.Curso{}, &models.Persona{}, &models.Inscripcion{}, &models.Usuario{})
+
+	// Inyectar DB en el controlador de inscripciones
+	controllers.SetDB(db)
+	// Inyectar DB en el controlador de cursos
+	controllers.SetDB(db)
 
 	// Inicializar router Gin
 	router := gin.Default()

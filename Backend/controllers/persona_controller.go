@@ -51,7 +51,7 @@ func BuscarPersonaPorCuilHandler(c *gin.Context) {
 	// Solo nombre, apellido y cuil para el frontend
 	c.JSON(http.StatusOK, gin.H{
 		"cuil": persona.Cuil,
-		"firstName": persona.Nombre,
-		"lastName": persona.Apellido,
+		"nombre": persona.Nombre,
+		"apellido": persona.Apellido,
 	})
 }

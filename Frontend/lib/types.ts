@@ -7,6 +7,7 @@ export interface Course {
   capacity: number
   enrolled: number
   location: "presencial" | "virtual"
+  uniqueKey?: string
 }
 
 export interface User {

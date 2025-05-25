@@ -1,168 +1,100 @@
 package controllers
 
 import (
-	"encoding/json"
 	"net/http"
-	"os"
-	"sync"
 
 	"github.com/gin-gonic/gin"
+	"gobierno-inscripcion/models"
 	"gobierno-inscripcion/services"
+	"gorm.io/gorm"
 )
+
+// Asume que tienes una variable global DB *gorm.DB inicializada en main.go
+var DB *gorm.DB
+
+func SetDB(db *gorm.DB) {
+	DB = db
+}
 
 type InscripcionRequest struct {
 	Cuil    string `json:"cuil" binding:"required"`
-	CursoID string `json:"curso_id" binding:"required"`
+	CursoID uint   `json:"curso_id" binding:"required"`
 }
 
-type Inscripto struct {
-	Cuil         string           `json:"cuil"`
-	CursoID      string           `json:"curso_id"`
-	DatosPersona services.Persona `json:"datos_persona"`
-}
-
-
-var inscritos []Inscripto
-var mu sync.Mutex
-
-// POST /inscribir-persona
+// POST /inscripciones
 func InscribirPersona(c *gin.Context) {
 	var request InscripcionRequest
-
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "CUIL y CursoID son requeridos"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "CUIL y curso_id son requeridos"})
 		return
 	}
 
-	mu.Lock()
-	defer mu.Unlock()
-
-	for _, p := range inscritos {
-		if p.Cuil == request.Cuil && p.CursoID == request.CursoID {
-			c.JSON(http.StatusConflict, gin.H{"error": "La persona ya está inscrita en este curso"})
+	// Validar existencia de persona SOLO consulta SOAP si no existe en DB
+	var persona models.Persona
+	dbErr := DB.First(&persona, "cuil = ?", request.Cuil).Error
+	if dbErr != nil {
+		// Consultar al servicio SOAP
+		soapPersona, errSoap := services.ConsultarPersonaPorCUIL(request.Cuil)
+		if errSoap != nil {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Persona no encontrada en padrón provincial"})
 			return
 		}
-	}
-
-	// Validar curso
-	cursoValido := false
-	for _, curso := range services.CursosDisponibles {
-		if curso.ID == request.CursoID {
-			cursoValido = true
-			break
+		// Validar que los campos requeridos no estén vacíos
+		if soapPersona.Cuil == "" || soapPersona.Nombre == "" || soapPersona.Apellido == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Datos incompletos de la persona desde el padrón provincial"})
+			return
+		}
+		// Usar los datos del padrón para la inscripción
+		persona = models.Persona{
+			Cuil:     soapPersona.Cuil,
+			Nombre:   soapPersona.Nombre,
+			Apellido: soapPersona.Apellido,
 		}
 	}
-	if !cursoValido {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "CursoID no válido"})
+
+	// Validar existencia de curso
+	var curso models.Curso
+	if err := DB.First(&curso, request.CursoID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Curso no encontrado"})
 		return
 	}
 
-	persona, err := services.ConsultarPersonaPorCUIL(request.Cuil)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Validar inscripción duplicada
+	var existente models.Inscripcion
+	if err := DB.Where("curso_id = ? AND cuil = ?", request.CursoID, request.Cuil).First(&existente).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "La persona ya está inscrita en este curso"})
 		return
 	}
 
-    inscripto := Inscripto{
-        Cuil:         request.Cuil,
-        CursoID:      request.CursoID,
-        DatosPersona: *persona,
-    }
-    
-	inscritos = append(inscritos, inscripto)
+	inscripcion := models.Inscripcion{
+		CursoID:     request.CursoID,
+		NombreCurso: curso.Nombre,
+		Cuil:        persona.Cuil,
+		Nombre:      persona.Nombre,
+		Apellido:    persona.Apellido,
+	}
+	if err := DB.Create(&inscripcion).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo inscribir"})
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Persona inscrita correctamente",
-		"persona": inscripto,
+		"message":     "Inscripción exitosa",
+		"inscripcion": inscripcion,
 	})
 }
 
-// GET /inscriptos
+// GET /inscripciones?curso_id=XX
 func ObtenerInscritos(c *gin.Context) {
-	mu.Lock()
-	defer mu.Unlock()
-	c.JSON(http.StatusOK, inscritos)
-}
-
-// POST /resetear-inscriptos
-func ResetearInscripciones(c *gin.Context) {
-	mu.Lock()
-	inscritos = []Inscripto{}
-	mu.Unlock()
-	c.JSON(http.StatusOK, gin.H{"message": "Lista de inscriptos reseteada"})
-}
-
-// GET /buscar-inscripto?cuil=XXXXXXXXXXX
-func BuscarInscriptoPorCUIL(c *gin.Context) {
-	cuil := c.Query("cuil")
-	if cuil == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "CUIL es requerido"})
+	cursoID := c.Query("curso_id")
+	var inscripciones []models.Inscripcion
+	query := DB.Model(&models.Inscripcion{})
+	if cursoID != "" {
+		query = query.Where("curso_id = ?", cursoID)
+	}
+	if err := query.Find(&inscripciones).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al obtener inscripciones"})
 		return
 	}
-
-	mu.Lock()
-	defer mu.Unlock()
-
-	for _, p := range inscritos {
-		if p.Cuil == cuil {
-			var nombreCurso string
-			for _, curso := range services.CursosDisponibles {
-				if curso.ID == p.CursoID {
-					nombreCurso = curso.Nombre
-					break
-				}
-			}
-
-			c.JSON(http.StatusOK, gin.H{
-				"persona":      p,
-				"nombre_curso": nombreCurso,
-			})
-			return
-		}
-	}
-
-	c.JSON(http.StatusNotFound, gin.H{"error": "Persona no encontrada"})
-}
-
-// POST /guardar-inscriptos
-func GuardarInscripcionesEnJSON(c *gin.Context) {
-	mu.Lock()
-	defer mu.Unlock()
-
-	data, err := json.MarshalIndent(inscritos, "", "  ")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al serializar datos"})
-		return
-	}
-
-	if err := os.WriteFile("inscriptos_backup.json", data, 0644); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al guardar archivo"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Inscriptos guardados en inscriptos_backup.json"})
-}
-
-// POST /cargar-inscriptos
-func CargarInscriptosDesdeJSON(c *gin.Context) {
-	data, err := os.ReadFile("inscriptos_backup.json")
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo leer el archivo"})
-		return
-	}
-
-	var backup []Inscripto
-	if err := json.Unmarshal(data, &backup); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error al parsear JSON"})
-		return
-	}
-
-	mu.Lock()
-	inscritos = backup
-	mu.Unlock()
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":  "Backup cargado correctamente",
-		"cantidad": len(inscritos),
-	})
+	c.JSON(http.StatusOK, inscripciones)
 }

@@ -32,6 +32,7 @@ func RegisterRoutes(r *gin.Engine) {
 		// Cursos
 		api.GET("/cursos", controllers.ObtenerCursos)
 		api.POST("/curso", controllers.CrearCurso)
+		api.DELETE("/cursos/:id", controllers.EliminarCurso)
 
 		// Persona (GET por CUIL)
 		api.GET("/persona/:cuil", controllers.BuscarPersonaPorCuilHandler)
