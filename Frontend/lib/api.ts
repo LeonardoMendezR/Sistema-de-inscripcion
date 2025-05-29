@@ -49,7 +49,7 @@ export async function getUserByCuil(cuil: string) {
 }
 
 export async function checkEnrollment(courseId: string, cuil: string) {
-  const res = await api.get(`/inscripciones?cursoId=${courseId}`);
+  const res = await api.get(`/inscripciones?curso_id=${courseId}`);
   if (!Array.isArray(res.data)) return false;
   return res.data.some((enr: any) => enr.cuil === cuil);
 }
@@ -77,6 +77,6 @@ export async function createCourse(courseData: any) {
 }
 
 export async function getCourseEnrollments(courseId: string) {
-  const res = await api.get(`/inscripciones?cursoId=${courseId}`);
+  const res = await api.get(`/inscripciones?curso_id=${courseId}`);
   return res.data;
 }

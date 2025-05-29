@@ -3,7 +3,6 @@ package controllers
 import (
     "net/http"
     "github.com/gin-gonic/gin"
-    "gobierno-inscripcion/services"
     "gobierno-inscripcion/models"
     "strconv"
     "time"
@@ -86,19 +85,18 @@ func EliminarCurso(c *gin.Context) {
         c.JSON(http.StatusBadRequest, gin.H{"error": "ID de curso inválido"})
         return
     }
-    found := false
-    nuevosCursos := make([]models.Curso, 0, len(services.CursosDisponibles))
-    for _, curso := range services.CursosDisponibles {
-        if curso.ID != uint(id) {
-            nuevosCursos = append(nuevosCursos, curso)
-        } else {
-            found = true
-        }
-    }
-    if !found {
-        c.JSON(http.StatusNotFound, gin.H{"error": "Curso no encontrado"})
+
+    // Eliminar inscripciones asociadas primero
+    if err := DB.Where("curso_id = ?", id).Delete(&models.Inscripcion{}).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudieron eliminar las inscripciones asociadas"})
         return
     }
-    services.CursosDisponibles = nuevosCursos
-    c.JSON(http.StatusOK, gin.H{"message": "Curso eliminado correctamente"})
+
+    // Eliminar el curso
+    if err := DB.Delete(&models.Curso{}, id).Error; err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": "No se pudo eliminar el curso"})
+        return
+    }
+
+    c.JSON(http.StatusOK, gin.H{"message": "Curso e inscripciones eliminados correctamente"})
 }

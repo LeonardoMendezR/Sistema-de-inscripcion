@@ -6,22 +6,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Skeleton } from "@/components/ui/skeleton"
 import { getCourseEnrollments } from "@/lib/api"
-// Define EnrollmentWithUserData type locally
-type EnrollmentWithUserData = {
-  id: string
-  userId: string
-  courseId: string
-  enrollmentDate: string
-  user?: {
-    firstName?: string
-    lastName?: string
-    email?: string
-    phone?: string
-  }
-  course?: {
-    title?: string
-  }
+// Ajustar el tipo de dato y mapeo para los datos planos de inscripciones
+// El backend ahora devuelve: id, curso_id, nombre_curso, cuil, nombre, apellido, fecha_inscripcion
+
+interface FlatEnrollment {
+  id: number;
+  curso_id: number;
+  nombre_curso: string;
+  cuil: string;
+  nombre: string;
+  apellido: string;
+  fecha_inscripcion: string;
 }
+
 import { Download, FileSpreadsheet, FileSpreadsheetIcon as FileCsv } from "lucide-react"
 import * as XLSX from "xlsx"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -31,14 +28,24 @@ interface EnrollmentListProps {
 }
 
 export function EnrollmentList({ courseId }: EnrollmentListProps) {
-  const [enrollments, setEnrollments] = useState<EnrollmentWithUserData[]>([])
+  const [enrollments, setEnrollments] = useState<FlatEnrollment[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadEnrollments() {
       try {
         const data = await getCourseEnrollments(courseId)
-        setEnrollments(data)
+        // Mapeo para soportar campos con mayúscula inicial (Go)
+        const normalized = data.map((item: any) => ({
+          id: item.id ?? item.ID,
+          curso_id: item.curso_id ?? item.CursoID,
+          nombre_curso: item.nombre_curso ?? item.NombreCurso,
+          cuil: item.cuil ?? item.Cuil,
+          nombre: item.nombre ?? item.Nombre,
+          apellido: item.apellido ?? item.Apellido,
+          fecha_inscripcion: item.fecha_inscripcion ?? item.FechaInscripcion,
+        }))
+        setEnrollments(normalized)
       } catch (error) {
         console.error("Error al cargar las inscripciones:", error)
       } finally {
@@ -54,14 +61,12 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
 
     // Preparar los datos para la exportación
     const worksheetData = enrollments.map((enrollment) => ({
-      CUIL: enrollment.userId,
-      Nombre: enrollment.user?.firstName || "",
-      Apellido: enrollment.user?.lastName || "",
-      Email: enrollment.user?.email || "",
-      Teléfono: enrollment.user?.phone || "",
-      "Nombre del Curso": enrollment.course?.title || "",
-      "ID del Curso": enrollment.courseId,
-      "Fecha de Inscripción": enrollment.enrollmentDate,
+      CUIL: enrollment.cuil,
+      Nombre: enrollment.nombre,
+      Apellido: enrollment.apellido,
+      "Fecha de Inscripción": enrollment.fecha_inscripcion,
+      "Nombre del Curso": enrollment.nombre_curso,
+      "ID del Curso": enrollment.curso_id,
     }))
 
     // Crear libro y hoja de cálculo
@@ -74,11 +79,9 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
       { wch: 15 }, // CUIL
       { wch: 15 }, // Nombre
       { wch: 15 }, // Apellido
-      { wch: 25 }, // Email
-      { wch: 15 }, // Teléfono
+      { wch: 25 }, // Fecha de Inscripción
       { wch: 30 }, // Nombre del Curso
       { wch: 10 }, // ID del Curso
-      { wch: 15 }, // Fecha de Inscripción
     ]
     worksheet["!cols"] = columnsWidth
 
@@ -91,14 +94,12 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
 
     // Preparar los datos para la exportación
     const csvData = enrollments.map((enrollment) => ({
-      CUIL: enrollment.userId,
-      Nombre: enrollment.user?.firstName || "",
-      Apellido: enrollment.user?.lastName || "",
-      Email: enrollment.user?.email || "",
-      Telefono: enrollment.user?.phone || "",
-      NombreCurso: enrollment.course?.title || "",
-      IDCurso: enrollment.courseId,
-      FechaInscripcion: enrollment.enrollmentDate,
+      CUIL: enrollment.cuil,
+      Nombre: enrollment.nombre,
+      Apellido: enrollment.apellido,
+      FechaInscripcion: enrollment.fecha_inscripcion,
+      NombreCurso: enrollment.nombre_curso,
+      IDCurso: enrollment.curso_id,
     }))
 
     // Crear libro y hoja de cálculo
@@ -131,34 +132,14 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
     )
   }
 
-  // Obtener el nombre del curso del primer inscripto (si existe)
-  const courseName = enrollments[0]?.course?.title || "-";
+  // El nombre del curso se puede mostrar arriba
+  const courseName = enrollments[0]?.nombre_curso || "-";
 
   return (
     <Card className="shadow-xl border-gray-100">
       <CardHeader className="bg-gray-50 border-b rounded-t-md flex flex-col gap-2">
         <span className="text-xl font-bold tracking-tight text-primary">{courseName}</span>
-        <div className="flex flex-row items-center justify-between w-full">
-          <CardTitle className="text-lg font-bold tracking-tight">Listado de Inscripciones</CardTitle>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button disabled={enrollments.length === 0} variant="outline" size="sm" title="Exportar inscripciones">
-                <Download className="h-4 w-4 mr-2" />
-                Exportar
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={exportToExcel} className="cursor-pointer">
-                <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
-                Exportar a Excel (.xlsx)
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={exportToCSV} className="cursor-pointer">
-                <FileCsv className="h-4 w-4 mr-2 text-blue-600" />
-                Exportar a CSV (.csv)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+        <CardTitle className="text-lg font-bold tracking-tight">Listado de Inscripciones</CardTitle>
       </CardHeader>
       <CardContent>
         {enrollments.length === 0 ? (
@@ -173,32 +154,18 @@ export function EnrollmentList({ courseId }: EnrollmentListProps) {
                   <TableHead>CUIL</TableHead>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Apellido</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
-                  <TableHead className="hidden md:table-cell">Teléfono</TableHead>
                   <TableHead>Fecha de Inscripción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {enrollments.map((enrollment: any, idx: number) => {
-                  const user = enrollment.user || enrollment.datos_persona || {};
-                  const cuil = enrollment.userId || enrollment.cuil || "";
-                  const nombre = user.firstName || user.nombre || "-";
-                  const apellido = user.lastName || user.apellido || "-";
-                  const email = user.email || "-";
-                  const telefono = user.phone || "-";
-                  const fecha = enrollment.fecha || enrollment.enrollmentDate || "";
-                  return (
-                    <TableRow key={enrollment.id || `${cuil}-${enrollment.courseId || enrollment.curso_id || ""}-${idx}`}
-                      className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                      <TableCell className="font-mono font-medium">{cuil}</TableCell>
-                      <TableCell>{nombre}</TableCell>
-                      <TableCell>{apellido}</TableCell>
-                      <TableCell className="hidden md:table-cell">{email}</TableCell>
-                      <TableCell className="hidden md:table-cell">{telefono}</TableCell>
-                      <TableCell>{fecha ? new Date(fecha).toLocaleString() : "-"}</TableCell>
-                    </TableRow>
-                  );
-                })}
+                {enrollments.map((enrollment, idx) => (
+                  <TableRow key={enrollment.id} className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                    <TableCell className="font-mono font-medium">{enrollment.cuil}</TableCell>
+                    <TableCell>{enrollment.nombre}</TableCell>
+                    <TableCell>{enrollment.apellido}</TableCell>
+                    <TableCell>{enrollment.fecha_inscripcion ? new Date(enrollment.fecha_inscripcion).toLocaleString() : "-"}</TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
