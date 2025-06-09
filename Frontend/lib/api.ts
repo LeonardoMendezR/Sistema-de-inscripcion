@@ -8,6 +8,7 @@ api.interceptors.request.use((config) => {
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("token");
     if (token) {
+      if (!config.headers) config.headers = {};
       config.headers.Authorization = `Bearer ${token}`;
     }
   }
@@ -55,9 +56,19 @@ export async function checkEnrollment(courseId: string, cuil: string) {
 }
 
 export async function createEnrollment(courseId: string, cuil: string) {
-  // El backend espera { cuil, curso_id }
-  const res = await api.post("/inscripciones", { cuil, curso_id: courseId });
-  return res.data;
+  // El backend espera { cuil, curso_id } y curso_id debe ser número
+  const body = { cuil, curso_id: Number(courseId) };
+  console.log("ENROLL BODY", body);
+  try {
+    const res = await api.post("/inscripciones", body);
+    return res.data;
+  } catch (err: any) {
+    // Mostrar mensaje de error del backend si existe
+    if (err?.response?.data?.error) {
+      throw new Error(err.response.data.error);
+    }
+    throw err;
+  }
 }
 
 export async function createCourse(courseData: any) {
